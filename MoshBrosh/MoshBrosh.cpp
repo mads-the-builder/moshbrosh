@@ -1,12 +1,13 @@
 /*
  * MoshBrosh - Datamosh Effect Plugin for Premiere Pro
- * Uses sequence data to store frames instead of checkout (avoids exceptions)
+ * Simplified version: deterministic block displacement (no frame history needed)
  */
 
 #include "MoshBrosh.h"
 #include <cstdio>
 #include <cstdarg>
 #include <cstdlib>
+#include <cmath>
 
 // Debug logging
 static FILE* g_debugLog = nullptr;
@@ -34,10 +35,6 @@ static PF_Err About(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* param
 static PF_Err GlobalSetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output);
 static PF_Err GlobalSetdown(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output);
 static PF_Err ParamsSetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output);
-static PF_Err SequenceSetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output);
-static PF_Err SequenceSetdown(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output);
-static PF_Err SequenceResetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output);
-static PF_Err SequenceFlatten(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output);
 static PF_Err Render(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output);
 
 // About dialog
@@ -54,10 +51,8 @@ static PF_Err GlobalSetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef*
     out_data->my_version = PF_VERSION(PLUGIN_MAJOR_VERSION, PLUGIN_MINOR_VERSION,
         PLUGIN_BUG_VERSION, PLUGIN_STAGE_VERSION, PLUGIN_BUILD_VERSION);
 
-    // Remove WIDE_TIME_INPUT since we're not using frame checkout anymore
     out_data->out_flags = PF_OutFlag_PIX_INDEPENDENT |
-                          PF_OutFlag_USE_OUTPUT_EXTENT |
-                          PF_OutFlag_SEQUENCE_DATA_NEEDS_FLATTENING;
+                          PF_OutFlag_USE_OUTPUT_EXTENT;
 
     out_data->out_flags2 = PF_OutFlag2_FLOAT_COLOR_AWARE |
                            PF_OutFlag2_DOESNT_NEED_EMPTY_PIXELS;
@@ -121,172 +116,35 @@ static PF_Err ParamsSetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef*
     return err;
 }
 
-// Global pointer to sequence data (since Premiere doesn't support handles well for C++ objects)
-static MoshSequenceData* g_seqData = nullptr;
+// Simple hash for deterministic randomness
+static inline uint32_t hash(uint32_t x) {
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
+    return x;
+}
 
-// Sequence setup - allocate sequence data
-static PF_Err SequenceSetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output) {
-    DebugLog("SequenceSetup called");
+// Get pixel from source with bounds checking
+static inline void GetPixel(const float* srcData, int width, int height, int rowStride,
+                            int x, int y, bool negativeRowbytes, float* outPixel) {
+    x = Clamp(x, 0, width - 1);
+    y = Clamp(y, 0, height - 1);
 
-    if (!g_seqData) {
-        g_seqData = new MoshSequenceData();
+    const float* row;
+    if (negativeRowbytes) {
+        row = srcData - y * rowStride;
+    } else {
+        row = srcData + y * rowStride;
     }
 
-    // Allocate a dummy handle for the host
-    PF_Handle handle = PF_NEW_HANDLE(sizeof(int32_t));
-    out_data->sequence_data = handle;
-
-    return PF_Err_NONE;
+    const float* px = row + x * 4;
+    outPixel[0] = px[0];
+    outPixel[1] = px[1];
+    outPixel[2] = px[2];
+    outPixel[3] = px[3];
 }
 
-// Sequence setdown - free sequence data
-static PF_Err SequenceSetdown(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output) {
-    DebugLog("SequenceSetdown called");
-
-    if (g_seqData) {
-        delete g_seqData;
-        g_seqData = nullptr;
-    }
-
-    if (in_data->sequence_data) {
-        PF_DISPOSE_HANDLE(in_data->sequence_data);
-    }
-
-    return PF_Err_NONE;
-}
-
-// Sequence resetup - called when loading project
-static PF_Err SequenceResetup(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output) {
-    DebugLog("SequenceResetup called");
-
-    if (!g_seqData) {
-        g_seqData = new MoshSequenceData();
-    }
-
-    // Allocate a dummy handle for the host
-    PF_Handle handle = PF_NEW_HANDLE(sizeof(int32_t));
-    out_data->sequence_data = handle;
-
-    return PF_Err_NONE;
-}
-
-// Sequence flatten - prepare for serialization (no-op since we use global)
-static PF_Err SequenceFlatten(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output) {
-    DebugLog("SequenceFlatten called");
-
-    // Just return the existing handle
-    out_data->sequence_data = in_data->sequence_data;
-
-    return PF_Err_NONE;
-}
-
-// Copy frame from PF_LayerDef to AccumulatedFrame
-static void CopyFrameToAccumulated(PF_LayerDef* src, AccumulatedFrame& dest) {
-    int width = src->width;
-    int height = src->height;
-
-    dest.Allocate(width, height);
-    dest.frameIndex = 0; // Will be set by caller
-
-    // Handle potentially negative rowbytes by using absolute value for stride
-    // but correctly addressing memory
-    int absRowbytes = src->rowbytes < 0 ? -src->rowbytes : src->rowbytes;
-
-    for (int y = 0; y < height; ++y) {
-        const float* srcRow;
-        if (src->rowbytes < 0) {
-            // Bottom-up: data pointer is at last row
-            srcRow = reinterpret_cast<const float*>(
-                reinterpret_cast<const char*>(src->data) - y * absRowbytes);
-        } else {
-            srcRow = reinterpret_cast<const float*>(
-                reinterpret_cast<const char*>(src->data) + y * absRowbytes);
-        }
-
-        float* destRow = &dest.pixelData[y * width * 4];
-        memcpy(destRow, srcRow, width * 4 * sizeof(float));
-    }
-}
-
-// Simple passthrough helper
-static void DoPassthrough(PF_LayerDef* src, PF_LayerDef* output) {
-    int width = src->width;
-    int height = src->height;
-
-    int srcAbsRowbytes = src->rowbytes < 0 ? -src->rowbytes : src->rowbytes;
-    int outAbsRowbytes = output->rowbytes < 0 ? -output->rowbytes : output->rowbytes;
-
-    for (int y = 0; y < height; ++y) {
-        const char* srcRow;
-        char* destRow;
-
-        if (src->rowbytes < 0) {
-            srcRow = reinterpret_cast<const char*>(src->data) - y * srcAbsRowbytes;
-        } else {
-            srcRow = reinterpret_cast<const char*>(src->data) + y * srcAbsRowbytes;
-        }
-
-        if (output->rowbytes < 0) {
-            destRow = reinterpret_cast<char*>(output->data) - y * outAbsRowbytes;
-        } else {
-            destRow = reinterpret_cast<char*>(output->data) + y * outAbsRowbytes;
-        }
-
-        memcpy(destRow, srcRow, width * 4 * sizeof(float));
-    }
-}
-
-// Compute luminance from BGRA pixel
-inline float GetLuminance(const float* bgra) {
-    return 0.114f * bgra[0] + 0.587f * bgra[1] + 0.299f * bgra[2];
-}
-
-// Compute block motion using SAD
-static void ComputeBlockMotion(
-    const float* current, const float* previous,
-    int width, int height,
-    int blockX, int blockY, int blockSize, int searchRange,
-    int16_t& outDx, int16_t& outDy)
-{
-    int bestDx = 0, bestDy = 0;
-    float bestSAD = 1e30f;
-
-    int bx = blockX * blockSize;
-    int by = blockY * blockSize;
-
-    for (int dy = -searchRange; dy <= searchRange; dy += 2) {
-        for (int dx = -searchRange; dx <= searchRange; dx += 2) {
-            float sad = 0.0f;
-
-            for (int py = 0; py < blockSize && (by + py) < height; ++py) {
-                int cy = by + py;
-                int ry = cy + dy;
-                if (ry < 0 || ry >= height) continue;
-
-                for (int px = 0; px < blockSize && (bx + px) < width; ++px) {
-                    int cx = bx + px;
-                    int rx = cx + dx;
-                    if (rx < 0 || rx >= width) continue;
-
-                    float currLuma = GetLuminance(&current[(cy * width + cx) * 4]);
-                    float prevLuma = GetLuminance(&previous[(ry * width + rx) * 4]);
-                    sad += fabsf(currLuma - prevLuma);
-                }
-            }
-
-            if (sad < bestSAD) {
-                bestSAD = sad;
-                bestDx = dx;
-                bestDy = dy;
-            }
-        }
-    }
-
-    outDx = (int16_t)bestDx;
-    outDy = (int16_t)bestDy;
-}
-
-// Main render function
+// Main render function - stateless, deterministic block displacement
 static PF_Err Render(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* params[], PF_LayerDef* output) {
     PF_LayerDef* src = &params[MOSH_INPUT]->u.ld;
     int width = src->width;
@@ -305,138 +163,103 @@ static PF_Err Render(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* para
 
     int32_t currentFrame = (in_data->time_step > 0) ? (int32_t)(in_data->current_time / in_data->time_step) : 0;
 
-    DebugLog("Render: frame=%d mosh=%d dur=%d blend=%.2f", currentFrame, moshFrame, duration, blend);
+    // Not in mosh range - passthrough
+    if (currentFrame < moshFrame || currentFrame >= moshFrame + duration) {
+        // Simple passthrough
+        int srcAbsRowbytes = src->rowbytes < 0 ? -src->rowbytes : src->rowbytes;
+        int outAbsRowbytes = output->rowbytes < 0 ? -output->rowbytes : output->rowbytes;
 
-    // Use global sequence data
-    MoshSequenceData* seqData = g_seqData;
-
-    // Before mosh range OR no sequence data - just passthrough
-    if (currentFrame < moshFrame || !seqData) {
-        // If this is the reference frame (moshFrame - 1), store it
-        if (seqData && currentFrame == moshFrame - 1) {
-            DebugLog("Storing reference frame %d", currentFrame);
-            CopyFrameToAccumulated(src, seqData->referenceFrame);
-            seqData->referenceFrame.frameIndex = currentFrame;
+        for (int y = 0; y < height; ++y) {
+            const char* srcRow = (src->rowbytes < 0)
+                ? (const char*)src->data - y * srcAbsRowbytes
+                : (const char*)src->data + y * srcAbsRowbytes;
+            char* dstRow = (output->rowbytes < 0)
+                ? (char*)output->data - y * outAbsRowbytes
+                : (char*)output->data + y * outAbsRowbytes;
+            memcpy(dstRow, srcRow, width * 4 * sizeof(float));
         }
-
-        // Also store previous frame for motion estimation
-        if (seqData) {
-            auto& prevFrame = seqData->accumulatedFrames[currentFrame];
-            CopyFrameToAccumulated(src, prevFrame);
-            prevFrame.frameIndex = currentFrame;
-        }
-
-        DoPassthrough(src, output);
         return PF_Err_NONE;
     }
 
-    // After mosh range - passthrough
-    if (currentFrame >= moshFrame + duration) {
-        DoPassthrough(src, output);
-        return PF_Err_NONE;
-    }
+    // In mosh range - apply deterministic block displacement
+    int framesIntoMosh = currentFrame - moshFrame;
 
-    // In mosh range - apply effect
-    DebugLog("MOSH: frame=%d", currentFrame);
+    // Calculate row strides
+    int srcAbsRowbytes = src->rowbytes < 0 ? -src->rowbytes : src->rowbytes;
+    int outAbsRowbytes = output->rowbytes < 0 ? -output->rowbytes : output->rowbytes;
+    int srcRowStride = srcAbsRowbytes / sizeof(float);
+    int outRowStride = outAbsRowbytes / sizeof(float);
+    bool srcNegative = src->rowbytes < 0;
+    bool outNegative = output->rowbytes < 0;
 
-    // Check if we have a valid reference frame
-    if (!seqData->referenceFrame.valid ||
-        seqData->referenceFrame.width != width ||
-        seqData->referenceFrame.height != height) {
-        DebugLog("No valid reference frame, passthrough");
-        DoPassthrough(src, output);
-        return PF_Err_NONE;
-    }
+    const float* srcData = (const float*)src->data;
+    float* outData = (float*)output->data;
 
-    // Get previous frame for motion estimation (or use reference if not available)
-    AccumulatedFrame* prevFrame = &seqData->referenceFrame;
-    int32_t prevFrameIdx = currentFrame - 1;
-    auto it = seqData->accumulatedFrames.find(prevFrameIdx);
-    if (it != seqData->accumulatedFrames.end() && it->second.valid &&
-        it->second.width == width && it->second.height == height) {
-        prevFrame = &it->second;
-    }
-
-    // Copy current frame to our buffer for motion estimation
-    AccumulatedFrame currentFrameData;
-    CopyFrameToAccumulated(src, currentFrameData);
-    currentFrameData.frameIndex = currentFrame;
-
-    // Compute motion vectors between current and previous frame
     int blocksX = (width + blockSize - 1) / blockSize;
     int blocksY = (height + blockSize - 1) / blockSize;
-    std::vector<int16_t> mvX(blocksX * blocksY, 0);
-    std::vector<int16_t> mvY(blocksX * blocksY, 0);
 
-    const float* currData = currentFrameData.pixelData.data();
-    const float* prevData = prevFrame->pixelData.data();
-    const float* refData = seqData->referenceFrame.pixelData.data();
-
+    // For each block, compute a deterministic displacement based on position and frame
     for (int by = 0; by < blocksY; ++by) {
         for (int bx = 0; bx < blocksX; ++bx) {
-            ComputeBlockMotion(currData, prevData, width, height,
-                bx, by, blockSize, searchRange,
-                mvX[by * blocksX + bx], mvY[by * blocksX + bx]);
-        }
-    }
+            // Hash based on block position - displacement accumulates over frames
+            uint32_t blockHash = hash(bx + by * 1000 + moshFrame * 100000);
 
-    // Apply motion vectors to reference frame and output
-    int outAbsRowbytes = output->rowbytes < 0 ? -output->rowbytes : output->rowbytes;
+            // Base displacement direction (stays consistent for this block)
+            int baseDx = ((blockHash & 0xFF) % (searchRange * 2 + 1)) - searchRange;
+            int baseDy = (((blockHash >> 8) & 0xFF) % (searchRange * 2 + 1)) - searchRange;
 
-    for (int by = 0; by < blocksY; ++by) {
-        for (int bx = 0; bx < blocksX; ++bx) {
-            int16_t dx = mvX[by * blocksX + bx];
-            int16_t dy = mvY[by * blocksX + bx];
+            // Displacement grows with frames into mosh (simulating motion accumulation)
+            float accumFactor = (float)framesIntoMosh / 10.0f;
+            int dx = (int)(baseDx * accumFactor);
+            int dy = (int)(baseDy * accumFactor);
 
+            // Copy block with displacement
             for (int py = 0; py < blockSize; ++py) {
                 int dstY = by * blockSize + py;
                 if (dstY >= height) continue;
-
-                int warpY = Clamp(dstY + dy, 0, height - 1);
 
                 for (int px = 0; px < blockSize; ++px) {
                     int dstX = bx * blockSize + px;
                     if (dstX >= width) continue;
 
-                    int warpX = Clamp(dstX + dx, 0, width - 1);
+                    // Source position with displacement
+                    int srcX = Clamp(dstX + dx, 0, width - 1);
+                    int srcY = Clamp(dstY + dy, 0, height - 1);
 
-                    const float* refPx = &refData[(warpY * width + warpX) * 4];
-                    const float* currPx = &currData[(dstY * width + dstX) * 4];
-
-                    float* outPx;
-                    if (output->rowbytes < 0) {
-                        outPx = reinterpret_cast<float*>(
-                            reinterpret_cast<char*>(output->data) - dstY * outAbsRowbytes) + dstX * 4;
+                    // Get source pixel
+                    const float* srcPx;
+                    if (srcNegative) {
+                        srcPx = srcData - srcY * srcRowStride + srcX * 4;
                     } else {
-                        outPx = reinterpret_cast<float*>(
-                            reinterpret_cast<char*>(output->data) + dstY * outAbsRowbytes) + dstX * 4;
+                        srcPx = srcData + srcY * srcRowStride + srcX * 4;
                     }
 
-                    outPx[0] = currPx[0] * (1.0f - blend) + refPx[0] * blend;
-                    outPx[1] = currPx[1] * (1.0f - blend) + refPx[1] * blend;
-                    outPx[2] = currPx[2] * (1.0f - blend) + refPx[2] * blend;
-                    outPx[3] = currPx[3] * (1.0f - blend) + refPx[3] * blend;
+                    // Get original pixel for blending
+                    const float* origPx;
+                    if (srcNegative) {
+                        origPx = srcData - dstY * srcRowStride + dstX * 4;
+                    } else {
+                        origPx = srcData + dstY * srcRowStride + dstX * 4;
+                    }
+
+                    // Output pixel
+                    float* outPx;
+                    if (outNegative) {
+                        outPx = outData - dstY * outRowStride + dstX * 4;
+                    } else {
+                        outPx = outData + dstY * outRowStride + dstX * 4;
+                    }
+
+                    // Blend displaced with original
+                    outPx[0] = origPx[0] * (1.0f - blend) + srcPx[0] * blend;
+                    outPx[1] = origPx[1] * (1.0f - blend) + srcPx[1] * blend;
+                    outPx[2] = origPx[2] * (1.0f - blend) + srcPx[2] * blend;
+                    outPx[3] = origPx[3] * (1.0f - blend) + srcPx[3] * blend;
                 }
             }
         }
     }
 
-    // Store current frame for next frame's motion estimation
-    seqData->accumulatedFrames[currentFrame] = std::move(currentFrameData);
-
-    // Clean up old frames to prevent memory bloat (keep only recent ones)
-    if (seqData->accumulatedFrames.size() > 10) {
-        auto oldest = seqData->accumulatedFrames.begin();
-        while (seqData->accumulatedFrames.size() > 5 && oldest != seqData->accumulatedFrames.end()) {
-            if (oldest->first < currentFrame - 5) {
-                oldest = seqData->accumulatedFrames.erase(oldest);
-            } else {
-                ++oldest;
-            }
-        }
-    }
-
-    DebugLog("MOSH complete frame=%d", currentFrame);
     return PF_Err_NONE;
 }
 
@@ -458,18 +281,6 @@ DllExport PF_Err EffectMain(PF_Cmd cmd, PF_InData* in_data, PF_OutData* out_data
             break;
         case PF_Cmd_PARAMS_SETUP:
             err = ParamsSetup(in_data, out_data, params, output);
-            break;
-        case PF_Cmd_SEQUENCE_SETUP:
-            err = SequenceSetup(in_data, out_data, params, output);
-            break;
-        case PF_Cmd_SEQUENCE_SETDOWN:
-            err = SequenceSetdown(in_data, out_data, params, output);
-            break;
-        case PF_Cmd_SEQUENCE_RESETUP:
-            err = SequenceResetup(in_data, out_data, params, output);
-            break;
-        case PF_Cmd_SEQUENCE_FLATTEN:
-            err = SequenceFlatten(in_data, out_data, params, output);
             break;
         case PF_Cmd_RENDER:
             err = Render(in_data, out_data, params, output);

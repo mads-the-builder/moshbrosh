@@ -1,0 +1,34 @@
+# Build artifacts
+build/
+DerivedData/
+*.o
+*.a
+*.dylib
+
+# Xcode
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+
+# SDKs (large, don't commit)
+AfterEffectsSDK*/
+Premiere_Pro_*_SDK/
+
+# macOS
+.DS_Store
+._*
+
+# Debug logs
+*.log
+
+# Plugin output (built binary)
+*.plugin/
+
+# CLI test files
+MoshBrosh/CLI/*.mp4
+MoshBrosh/CLI/*.png
+MoshBrosh/CLI/moshbrosh

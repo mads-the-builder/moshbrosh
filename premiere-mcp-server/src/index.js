@@ -61,6 +61,11 @@ wss.on("connection", (ws) => {
         return;
       }
 
+      if (msg.type === "auto_setup_complete") {
+        console.error(`[MCP] Auto-setup complete: ${JSON.stringify(msg.result)}`);
+        return;
+      }
+
       if (msg.type === "response" && msg.requestId) {
         const pending = pendingRequests.get(msg.requestId);
         if (pending) {

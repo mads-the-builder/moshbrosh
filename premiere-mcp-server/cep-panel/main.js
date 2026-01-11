@@ -1,15 +1,18 @@
 /**
  * MoshBrosh MCP Bridge - CEP Panel
  * Connects to MCP server and executes commands in Premiere Pro
+ * AUTO-OPENS test project when connected
  */
 
 const MCP_SERVER_URL = "ws://localhost:8847";
 const HEARTBEAT_INTERVAL = 2000;
+const AUTO_SETUP_DELAY = 3000; // Wait 3 seconds after connect before auto-setup
 
 let ws = null;
 let csInterface = null;
 let heartbeatTimer = null;
 let reconnectTimer = null;
+let autoSetupDone = false;
 
 // Initialize
 document.addEventListener("DOMContentLoaded", () => {
@@ -46,12 +49,18 @@ function connect() {
             setStatus("connected", "Connected to MCP Server");
             log("Connected!");
             startHeartbeat();
+
+            // Auto-setup project after a short delay
+            setTimeout(() => {
+                autoSetupProject();
+            }, AUTO_SETUP_DELAY);
         };
 
         ws.onclose = () => {
             setStatus("disconnected", "Disconnected from MCP Server");
             log("Disconnected");
             stopHeartbeat();
+            autoSetupDone = false; // Reset so we auto-setup on reconnect
             scheduleReconnect();
         };
 
@@ -72,6 +81,7 @@ function reconnect() {
     if (ws) {
         ws.close();
     }
+    autoSetupDone = false;
     connect();
 }
 
@@ -111,6 +121,41 @@ function sendResponse(requestId, result, error = null) {
     }
 }
 
+// Auto-setup project when panel connects
+async function autoSetupProject() {
+    if (autoSetupDone) {
+        log("Auto-setup already completed");
+        return;
+    }
+
+    log("Auto-setting up test project...");
+    setStatus("connected", "Setting up test project...");
+
+    try {
+        const result = await evalScript("checkAndSetupProject()");
+        autoSetupDone = true;
+
+        if (result.success) {
+            log(`Auto-setup complete: ${result.action || "ready"}`);
+            setStatus("connected", `Ready: ${result.action || "project loaded"}`);
+
+            // Notify MCP server that we're ready
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: "auto_setup_complete",
+                    result: result
+                }));
+            }
+        } else {
+            log(`Auto-setup issue: ${result.error}`);
+            setStatus("connected", `Setup issue: ${result.error}`);
+        }
+    } catch (e) {
+        log(`Auto-setup error: ${e.message}`);
+        setStatus("connected", "Connected (setup failed)");
+    }
+}
+
 async function handleMessage(data) {
     try {
         const msg = JSON.parse(data);
@@ -137,6 +182,12 @@ async function executeCommand(command, params) {
         case "open_test_project":
             return await openTestProject();
 
+        case "get_project_info":
+            return await getProjectInfo();
+
+        case "apply_effect":
+            return await applyEffect();
+
         case "render_frame":
             return await renderFrame(params.frame);
 
@@ -154,6 +205,15 @@ async function executeCommand(command, params) {
 
         case "compare_frames":
             return await compareFrames(params.frame_a, params.frame_b);
+
+        case "export_sequence":
+            return await exportSequence();
+
+        case "refresh_timeline":
+            return await refreshTimeline();
+
+        case "save_project":
+            return await saveProject();
 
         default:
             throw new Error(`Unknown command: ${command}`);
@@ -179,14 +239,26 @@ function evalScript(script) {
 
 // Command implementations
 async function openTestProject() {
-    log("Opening test project...");
-    const result = await evalScript("openOrCreateTestProject()");
+    log("Opening/setting up test project...");
+    const result = await evalScript("checkAndSetupProject()");
+    return result;
+}
+
+async function getProjectInfo() {
+    log("Getting project info...");
+    const result = await evalScript("getProjectInfo()");
+    return result;
+}
+
+async function applyEffect() {
+    log("Applying MoshBrosh effect...");
+    const result = await evalScript("applyMoshBroshEffect()");
     return result;
 }
 
 async function renderFrame(frameNum) {
     log(`Rendering frame ${frameNum}...`);
-    const result = await evalScript(`renderFrameToBase64(${frameNum})`);
+    const result = await evalScript(`renderFrameToFile(${frameNum})`);
     return result;
 }
 
@@ -220,9 +292,39 @@ async function compareFrames(frameA, frameB) {
     return result;
 }
 
-// Test button
+async function exportSequence() {
+    log("Exporting sequence...");
+    const result = await evalScript("exportSequence()");
+    return result;
+}
+
+async function refreshTimeline() {
+    log("Refreshing timeline...");
+    const result = await evalScript("refreshTimeline()");
+    return result;
+}
+
+async function saveProject() {
+    log("Saving project...");
+    const result = await evalScript("saveProject()");
+    return result;
+}
+
+// Manual test buttons
+function testSetup() {
+    openTestProject()
+        .then(r => log(`Setup result: ${JSON.stringify(r)}`))
+        .catch(e => log(`Setup error: ${e.message}`));
+}
+
 function testRender() {
-    executeCommand("render_frame", { frame: 10 })
-        .then(r => log(`Test result: ${JSON.stringify(r).slice(0, 100)}`))
-        .catch(e => log(`Test error: ${e.message}`));
+    executeCommand("render_frame", { frame: 15 })
+        .then(r => log(`Render result: ${JSON.stringify(r).slice(0, 200)}`))
+        .catch(e => log(`Render error: ${e.message}`));
+}
+
+function testInfo() {
+    getProjectInfo()
+        .then(r => log(`Project info: ${JSON.stringify(r)}`))
+        .catch(e => log(`Info error: ${e.message}`));
 }

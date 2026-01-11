@@ -373,6 +373,9 @@ static PF_Err Render(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* para
         return PF_Err_NONE;
     }
 
+    // Lock mutex for thread-safe access to cache
+    std::lock_guard<std::mutex> lock(seqData->cacheMutex);
+
     // Check if parameters changed - clear cache if so
     if (seqData->analyzedMoshFrame != moshFrame || seqData->analyzedDuration != duration ||
         seqData->analyzedBlockSize != blockSize) {

@@ -33,6 +33,7 @@
 #include <cmath>
 #include <algorithm>
 #include <cstring>
+#include <mutex>
 
 // Plugin info
 #define PLUGIN_NAME         "MoshBrosh"
@@ -192,6 +193,9 @@ struct MoshSequenceData {
 
     // Reference frame (frozen at mosh_frame - 1)
     AccumulatedFrame referenceFrame;
+
+    // Mutex for thread-safe access (Premiere renders frames in parallel)
+    std::mutex cacheMutex;
 
     MoshSequenceData() : version(1), analysisState(AnalysisState::NotStarted),
         analyzedMoshFrame(0), analyzedDuration(0), analyzedBlockSize(16),

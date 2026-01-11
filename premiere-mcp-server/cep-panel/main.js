@@ -50,10 +50,9 @@ function connect() {
             log("Connected!");
             startHeartbeat();
 
-            // Auto-setup project after a short delay
-            setTimeout(() => {
-                autoSetupProject();
-            }, AUTO_SETUP_DELAY);
+            // Just notify that we're connected - don't auto-apply effects
+            // Effects should only be applied when explicitly requested
+            log("Ready - waiting for commands");
         };
 
         ws.onclose = () => {

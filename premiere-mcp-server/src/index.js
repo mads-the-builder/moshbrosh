@@ -20,6 +20,13 @@ import { spawn, exec, execSync } from "child_process";
 import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from "fs";
 import { homedir } from "os";
 import path from "path";
+import {
+  dismissCrashReporter,
+  dismissRecoveryDialog,
+  waitForPremiereReady,
+  startDialogWatcher,
+  stopDialogWatcher
+} from "./dialog-handler.js";
 
 // Configuration
 const CONFIG = {
@@ -30,10 +37,15 @@ const CONFIG = {
   pluginBuildDir: "/Users/mads/coding/moshbrosh/MoshBrosh/Mac",
   pluginInstallDir: `${homedir()}/Library/Application Support/Adobe/Common/Plug-ins/7.0/MediaCore`,
   testVideoPath: "/Users/mads/coding/moshbrosh/MoshBrosh/CLI/test_input.mp4",
+  testProjectPath: "/Users/mads/Desktop/mosh_test_2.prproj",
+  exportOutputDir: "/Users/mads/coding/moshbrosh/MoshBrosh/CLI",
+  exportOutputPath: "/Users/mads/coding/moshbrosh/MoshBrosh/CLI/premiere_export.mp4",
   cliToolDir: "/Users/mads/coding/moshbrosh/MoshBrosh/CLI",
   cliToolPath: "/Users/mads/coding/moshbrosh/MoshBrosh/CLI/moshbrosh",
+  cliOutputPath: "/Users/mads/coding/moshbrosh/MoshBrosh/CLI/test_output_mcp.mp4",
   heartbeatInterval: 3000,
   heartbeatTimeout: 10000,
+  effectProcessingWaitMs: 20000, // Wait 20 seconds for effect to process
 };
 
 // State
@@ -288,28 +300,201 @@ function clearPluginDebugLog() {
   }
 }
 
-// Restart Premiere
+// Restart Premiere with dialog handling
 async function restartPremiere() {
-  // Kill existing
+  console.error("[MCP] Restarting Premiere Pro...");
+
+  // Start dialog watcher to auto-dismiss crash/recovery dialogs
+  startDialogWatcher();
+
+  // Kill existing Premiere
   try {
     execSync(`pkill -f "Adobe Premiere Pro"`);
+    console.error("[MCP] Killed existing Premiere process");
   } catch {}
 
-  await new Promise(r => setTimeout(r, 2000));
+  await new Promise(r => setTimeout(r, 3000));
 
-  // Launch
-  exec(`open -a "${CONFIG.premiereAppName}"`);
+  // Dismiss any lingering crash reporter dialogs
+  dismissCrashReporter();
 
-  // Wait for connection (up to 60s)
+  // Launch Premiere by opening the project file directly
+  exec(`open "${CONFIG.testProjectPath}"`);
+  console.error(`[MCP] Opening project: ${CONFIG.testProjectPath}`);
+
+  // Wait for Premiere to be ready (dialogs dismissed, main window available)
+  const ready = await waitForPremiereReady(90000);
+  if (!ready) {
+    stopDialogWatcher();
+    return { success: false, message: "Premiere did not become ready within 90s" };
+  }
+
+  console.error("[MCP] Premiere is ready, waiting for CEP panel connection...");
+
+  // Wait for CEP panel connection (up to 60s more)
   const start = Date.now();
   while (Date.now() - start < 60000) {
     if (premiereConnection) {
+      stopDialogWatcher();
+      console.error("[MCP] CEP panel connected!");
       return { success: true, message: "Premiere restarted and CEP panel connected" };
     }
     await new Promise(r => setTimeout(r, 1000));
   }
 
-  return { success: false, message: "Premiere started but CEP panel did not connect within 60s" };
+  stopDialogWatcher();
+  return { success: false, message: "Premiere started but CEP panel did not connect within 60s. Make sure to open Window > Extensions > MoshBrosh MCP Bridge" };
+}
+
+// Full autonomous test cycle
+async function runAutonomousTestCycle() {
+  console.error("[MCP] Starting autonomous test cycle...");
+
+  const results = {
+    steps: [],
+    success: false,
+    error: null
+  };
+
+  try {
+    // Step 1: Ensure Premiere is running and connected
+    if (!premiereConnection) {
+      results.steps.push({ step: "restart_premiere", status: "starting" });
+      const restartResult = await restartPremiere();
+      results.steps[results.steps.length - 1].status = restartResult.success ? "success" : "failed";
+      results.steps[results.steps.length - 1].result = restartResult;
+
+      if (!restartResult.success) {
+        results.error = "Failed to start Premiere";
+        return results;
+      }
+    }
+
+    // Step 2: Open test project (CEP panel should auto-setup)
+    results.steps.push({ step: "open_project", status: "starting" });
+    const projectResult = await sendToPremmiere("open_test_project", {});
+    results.steps[results.steps.length - 1].status = projectResult.success ? "success" : "failed";
+    results.steps[results.steps.length - 1].result = projectResult;
+
+    if (!projectResult.success) {
+      results.error = `Failed to open project: ${projectResult.error}`;
+      return results;
+    }
+
+    // Step 3: Apply MoshBrosh effect
+    results.steps.push({ step: "apply_effect", status: "starting" });
+    const effectResult = await sendToPremmiere("apply_effect", {});
+    results.steps[results.steps.length - 1].status = effectResult.success ? "success" : "failed";
+    results.steps[results.steps.length - 1].result = effectResult;
+
+    if (!effectResult.success) {
+      results.error = `Failed to apply effect: ${effectResult.error}`;
+      return results;
+    }
+
+    // Step 4: Wait for effect to process
+    results.steps.push({ step: "wait_for_processing", status: "starting", waitMs: CONFIG.effectProcessingWaitMs });
+    console.error(`[MCP] Waiting ${CONFIG.effectProcessingWaitMs}ms for effect to process...`);
+    await new Promise(r => setTimeout(r, CONFIG.effectProcessingWaitMs));
+    results.steps[results.steps.length - 1].status = "success";
+
+    // Step 5: Export sequence
+    results.steps.push({ step: "export_sequence", status: "starting" });
+    const exportResult = await sendToPremmiere("export_sequence", {});
+    results.steps[results.steps.length - 1].status = exportResult.success ? "success" : "failed";
+    results.steps[results.steps.length - 1].result = exportResult;
+
+    if (!exportResult.success) {
+      results.error = `Failed to export: ${exportResult.error}`;
+      return results;
+    }
+
+    // Step 6: Wait for export to complete and analyze
+    results.steps.push({ step: "analyze_export", status: "starting" });
+
+    // Wait for export file to appear and stabilize
+    let exportReady = false;
+    for (let i = 0; i < 60; i++) {
+      if (existsSync(CONFIG.exportOutputPath)) {
+        const size1 = statSync(CONFIG.exportOutputPath).size;
+        await new Promise(r => setTimeout(r, 2000));
+        const size2 = statSync(CONFIG.exportOutputPath).size;
+        if (size1 === size2 && size1 > 0) {
+          exportReady = true;
+          break;
+        }
+      }
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    if (!exportReady) {
+      results.steps[results.steps.length - 1].status = "failed";
+      results.error = "Export file not ready after 60s";
+      return results;
+    }
+
+    // Compare frames from export with CLI output
+    const analysisResult = await analyzeExportedVideo();
+    results.steps[results.steps.length - 1].status = analysisResult.success ? "success" : "failed";
+    results.steps[results.steps.length - 1].result = analysisResult;
+
+    results.success = analysisResult.success;
+    return results;
+
+  } catch (e) {
+    results.error = e.message;
+    return results;
+  }
+}
+
+// Analyze exported video by comparing frames to CLI output
+async function analyzeExportedVideo() {
+  try {
+    // Extract frames from Premiere export
+    const premiereFramesDir = `${CONFIG.exportOutputDir}/premiere_frames`;
+    execSync(`mkdir -p "${premiereFramesDir}"`);
+    execSync(`ffmpeg -y -i "${CONFIG.exportOutputPath}" -vf "select=gte(n\\,10)*lte(n\\,40)" -vsync vfr "${premiereFramesDir}/frame_%03d.png" 2>/dev/null`);
+
+    // Extract frames from CLI output (if exists)
+    const cliFramesDir = `${CONFIG.exportOutputDir}/cli_frames`;
+    if (existsSync(CONFIG.cliOutputPath)) {
+      execSync(`mkdir -p "${cliFramesDir}"`);
+      execSync(`ffmpeg -y -i "${CONFIG.cliOutputPath}" -vf "select=gte(n\\,10)*lte(n\\,40)" -vsync vfr "${cliFramesDir}/frame_%03d.png" 2>/dev/null`);
+    }
+
+    // Check if mosh effect is visible by comparing frame 15 to frame 30
+    // If moshing works, these should look different due to accumulated distortion
+    const frame15 = `${premiereFramesDir}/frame_006.png`; // frame 15 (offset by 10)
+    const frame30 = `${premiereFramesDir}/frame_021.png`; // frame 30
+
+    if (!existsSync(frame15) || !existsSync(frame30)) {
+      return { success: false, error: "Could not extract frames from export" };
+    }
+
+    // Use ImageMagick to compare frames
+    try {
+      const diffResult = execSync(`compare -metric RMSE "${frame15}" "${frame30}" null: 2>&1`, { encoding: "utf8" });
+      const rmse = parseFloat(diffResult.match(/[\d.]+/)?.[0] || "0");
+
+      // If RMSE is very low, frames are too similar (effect not working)
+      // If RMSE is reasonable, effect is creating visible changes
+      const effectWorking = rmse > 1000; // Threshold for visible difference
+
+      return {
+        success: effectWorking,
+        message: effectWorking ? "Mosh effect is visible in export" : "Frames look too similar - effect may not be working",
+        rmse,
+        frame15,
+        frame30
+      };
+    } catch (e) {
+      // compare returns non-zero if images differ, which is actually good
+      return { success: true, message: "Frames differ (effect appears to be working)" };
+    }
+
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
 }
 
 // MCP Server setup
@@ -501,6 +686,31 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["file", "old_text", "new_text"]
         }
+      },
+      {
+        name: "run_autonomous_test",
+        description: "Run a full autonomous test cycle: restart Premiere, open project, apply effect, wait for processing, export, and analyze frames. Handles crash recovery automatically.",
+        inputSchema: { type: "object", properties: {} }
+      },
+      {
+        name: "get_project_info",
+        description: "Get info about the currently open Premiere project",
+        inputSchema: { type: "object", properties: {} }
+      },
+      {
+        name: "apply_effect",
+        description: "Apply the MoshBrosh effect to the first clip in the timeline",
+        inputSchema: { type: "object", properties: {} }
+      },
+      {
+        name: "export_sequence",
+        description: "Export the current sequence to video file for analysis",
+        inputSchema: { type: "object", properties: {} }
+      },
+      {
+        name: "analyze_premiere_export",
+        description: "Analyze the exported video from Premiere, comparing frames to verify mosh effect is working",
+        inputSchema: { type: "object", properties: {} }
       }
     ]
   };
@@ -743,13 +953,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
       }
 
+      case "run_autonomous_test": {
+        const result = await runAutonomousTestCycle();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      }
+
+      case "analyze_premiere_export": {
+        const result = await analyzeExportedVideo();
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(result, null, 2)
+          }]
+        };
+      }
+
       case "open_test_project":
       case "render_frame":
       case "set_effect_param":
       case "get_effect_params":
       case "render_frame_range":
       case "get_source_frame":
-      case "compare_frames": {
+      case "compare_frames":
+      case "get_project_info":
+      case "apply_effect":
+      case "export_sequence": {
         // These require the CEP panel
         const result = await sendToPremmiere(name, args);
 

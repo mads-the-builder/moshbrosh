@@ -5,7 +5,7 @@
 
 // Configuration
 var TEST_VIDEO_PATH = "/Users/mads/coding/moshbrosh/MoshBrosh/CLI/test_input.mp4";
-var TEST_PROJECT_PATH = "/Users/mads/coding/moshbrosh/MoshBrosh/test_project.prproj";
+var TEST_PROJECT_PATH = "/Users/mads/Desktop/mosh_test_2.prproj";
 var FRAME_EXPORT_PATH = "/Users/mads/coding/moshbrosh/MoshBrosh/CLI/temp_frame.png";
 var RENDER_OUTPUT_PATH = "/Users/mads/coding/moshbrosh/MoshBrosh/CLI/premiere_render.mp4";
 

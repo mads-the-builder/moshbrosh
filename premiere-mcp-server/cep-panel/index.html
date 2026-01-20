@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>MoshBrosh MCP Bridge</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 12px;
+            padding: 10px;
+            background: #2d2d2d;
+            color: #e0e0e0;
+            margin: 0;
+        }
+        .status {
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+        .connected { background: #1e4620; }
+        .disconnected { background: #4a1e1e; }
+        .connecting { background: #4a4a1e; }
+        #log {
+            font-family: monospace;
+            font-size: 10px;
+            background: #1a1a1a;
+            padding: 8px;
+            border-radius: 4px;
+            max-height: 100px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+        }
+        button:hover { background: #0077ee; }
+    </style>
+</head>
+<body>
+    <div id="status" class="status disconnected">Disconnected from MCP Server</div>
+    <div style="margin-bottom: 10px;">
+        <button onclick="reconnect()">Reconnect</button>
+        <button onclick="testRender()">Test Render</button>
+    </div>
+    <div id="log">Initializing...</div>
+
+    <script src="./js/CSInterface.js"></script>
+    <script src="./main.js"></script>
+</body>
+</html>

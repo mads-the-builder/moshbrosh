@@ -1,0 +1,16 @@
+{
+  "name": "premiere-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for controlling Adobe Premiere Pro - enables autonomous plugin development",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ws": "^8.18.0"
+  }
+}

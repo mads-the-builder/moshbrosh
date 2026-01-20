@@ -228,10 +228,17 @@ static PF_Err SequenceSetup(PF_InData* in_data, PF_OutData* out_data) {
     return PF_Err_NONE;
 }
 
+// Global mutex to protect sequence data access across all threads
+// Must be static/global because it needs to outlive individual seqData instances
+static std::mutex g_seqDataMutex;
+
 static PF_Err SequenceSetdown(PF_InData* in_data, PF_OutData* out_data) {
     DebugLog("SequenceSetdown called");
 
     if (in_data->sequence_data) {
+        // Lock global mutex to ensure no Render threads are accessing seqData
+        std::lock_guard<std::mutex> lock(g_seqDataMutex);
+
         MoshSequenceData* seqData = *((MoshSequenceData**)(*in_data->sequence_data));
         if (seqData) {
             seqData->Clear();
@@ -248,6 +255,8 @@ static PF_Err SequenceFlatten(PF_InData* in_data, PF_OutData* out_data) {
     DebugLog("SequenceFlatten called");
 
     if (in_data->sequence_data) {
+        std::lock_guard<std::mutex> lock(g_seqDataMutex);
+
         MoshSequenceData* seqData = *((MoshSequenceData**)(*in_data->sequence_data));
         if (seqData) {
             seqData->accumulatedFrames.clear();
@@ -373,8 +382,9 @@ static PF_Err Render(PF_InData* in_data, PF_OutData* out_data, PF_ParamDef* para
         return PF_Err_NONE;
     }
 
-    // Lock mutex for thread-safe access to cache
-    std::lock_guard<std::mutex> lock(seqData->cacheMutex);
+    // Lock global mutex for thread-safe access to cache
+    // Using global mutex because seqData can be deleted by SequenceSetdown
+    std::lock_guard<std::mutex> lock(g_seqDataMutex);
 
     // Check if parameters changed - clear cache if so
     if (seqData->analyzedMoshFrame != moshFrame || seqData->analyzedDuration != duration ||

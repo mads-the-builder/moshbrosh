@@ -1,0 +1,410 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		MB000001 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = MB100001 /* Cocoa.framework */; };
+		MB000002 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = MB200001 /* InfoPlist.strings */; };
+		MB000003 /* MoshBrosh.r in Rez */ = {isa = PBXBuildFile; fileRef = MB300001 /* MoshBrosh.r */; };
+		MB000004 /* MoshBrosh.cpp in Sources */ = {isa = PBXBuildFile; fileRef = MB300002 /* MoshBrosh.cpp */; };
+		MB000005 /* AEFX_SuiteHelper.c in Sources */ = {isa = PBXBuildFile; fileRef = MB400001 /* AEFX_SuiteHelper.c */; };
+		MB000006 /* AEGP_SuiteHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = MB400002 /* AEGP_SuiteHandler.cpp */; };
+		MB000007 /* MissingSuiteError.cpp in Sources */ = {isa = PBXBuildFile; fileRef = MB400003 /* MissingSuiteError.cpp */; };
+		MB000008 /* Smart_Utils.cpp in Sources */ = {isa = PBXBuildFile; fileRef = MB400004 /* Smart_Utils.cpp */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		MB100001 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
+		MB100002 /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
+		MB100003 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = System/Library/Frameworks/CoreData.framework; sourceTree = SDKROOT; };
+		MB100004 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		MB200001 /* InfoPlist.strings */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = InfoPlist.strings; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		MB200002 /* MoshBrosh-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "MoshBrosh-Info.plist"; sourceTree = "<group>"; };
+		MB200003 /* MoshBrosh-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MoshBrosh-Prefix.pch"; sourceTree = "<group>"; };
+		MB300001 /* MoshBrosh.r */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.rez; name = MoshBrosh.r; path = ../MoshBrosh.r; sourceTree = "<group>"; };
+		MB300002 /* MoshBrosh.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MoshBrosh.cpp; path = ../MoshBrosh.cpp; sourceTree = "<group>"; };
+		MB300003 /* MoshBrosh.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = MoshBrosh.h; path = ../MoshBrosh.h; sourceTree = "<group>"; };
+		MB400001 /* AEFX_SuiteHelper.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = AEFX_SuiteHelper.c; path = Examples/Util/AEFX_SuiteHelper.c; sourceTree = AE_SDK_BASE_PATH; };
+		MB400002 /* AEGP_SuiteHandler.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = AEGP_SuiteHandler.cpp; path = Examples/Util/AEGP_SuiteHandler.cpp; sourceTree = AE_SDK_BASE_PATH; };
+		MB400003 /* MissingSuiteError.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = MissingSuiteError.cpp; path = Examples/Util/MissingSuiteError.cpp; sourceTree = AE_SDK_BASE_PATH; };
+		MB400004 /* Smart_Utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Smart_Utils.cpp; path = Examples/Util/Smart_Utils.cpp; sourceTree = AE_SDK_BASE_PATH; };
+		MB500001 /* MoshBrosh.plugin */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MoshBrosh.plugin; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		MB600001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				MB000001 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		MB700001 = {
+			isa = PBXGroup;
+			children = (
+				MB700002 /* MoshBrosh */,
+				MB700003 /* Supporting Files */,
+				MB700004 /* Frameworks */,
+				MB700005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		MB700002 /* MoshBrosh */ = {
+			isa = PBXGroup;
+			children = (
+				MB300003 /* MoshBrosh.h */,
+				MB300002 /* MoshBrosh.cpp */,
+				MB300001 /* MoshBrosh.r */,
+				MB200003 /* MoshBrosh-Prefix.pch */,
+				MB200002 /* MoshBrosh-Info.plist */,
+				MB200001 /* InfoPlist.strings */,
+			);
+			name = MoshBrosh;
+			sourceTree = SOURCE_ROOT;
+		};
+		MB700003 /* Supporting Files */ = {
+			isa = PBXGroup;
+			children = (
+				MB700006 /* AE SDK Utils */,
+			);
+			name = "Supporting Files";
+			sourceTree = SOURCE_ROOT;
+		};
+		MB700004 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				MB100001 /* Cocoa.framework */,
+				MB700007 /* Other Frameworks */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		MB700005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				MB500001 /* MoshBrosh.plugin */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		MB700006 /* AE SDK Utils */ = {
+			isa = PBXGroup;
+			children = (
+				MB400001 /* AEFX_SuiteHelper.c */,
+				MB400002 /* AEGP_SuiteHandler.cpp */,
+				MB400003 /* MissingSuiteError.cpp */,
+				MB400004 /* Smart_Utils.cpp */,
+			);
+			name = "AE SDK Utils";
+			sourceTree = "<group>";
+		};
+		MB700007 /* Other Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				MB100002 /* AppKit.framework */,
+				MB100003 /* CoreData.framework */,
+				MB100004 /* Foundation.framework */,
+			);
+			name = "Other Frameworks";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		MB800001 /* MoshBrosh */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = MB900003 /* Build configuration list for PBXNativeTarget "MoshBrosh" */;
+			buildPhases = (
+				MB600002 /* Sources */,
+				MB600001 /* Frameworks */,
+				MB600003 /* Resources */,
+				MB600004 /* Rez */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = MoshBrosh;
+			productName = MoshBrosh;
+			productReference = MB500001 /* MoshBrosh.plugin */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		MB800002 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1500;
+				ORGANIZATIONNAME = "";
+			};
+			buildConfigurationList = MB900001 /* Build configuration list for PBXProject "MoshBrosh" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				English,
+				en,
+			);
+			mainGroup = MB700001;
+			productRefGroup = MB700005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				MB800001 /* MoshBrosh */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		MB600003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				MB000002 /* InfoPlist.strings in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXRezBuildPhase section */
+		MB600004 /* Rez */ = {
+			isa = PBXRezBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				MB000003 /* MoshBrosh.r in Rez */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXRezBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		MB600002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				MB000005 /* AEFX_SuiteHelper.c in Sources */,
+				MB000006 /* AEGP_SuiteHandler.cpp in Sources */,
+				MB000007 /* MissingSuiteError.cpp in Sources */,
+				MB000008 /* Smart_Utils.cpp in Sources */,
+				MB000004 /* MoshBrosh.cpp in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		MB900101 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_PKGINFO_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = plugin;
+			};
+			name = Debug;
+		};
+		MB900102 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 3;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_PKGINFO_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 11.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				WRAPPER_EXTENSION = plugin;
+			};
+			name = Release;
+		};
+		MB900201 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MoshBrosh-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"\"${AE_SDK_BASE_PATH}/Examples/Headers\"",
+					"\"${AE_SDK_BASE_PATH}/Examples/Headers/SP\"",
+					"\"${AE_SDK_BASE_PATH}/Examples/Util\"",
+					"\"${AE_SDK_BASE_PATH}/Examples/Resources\"",
+					"\"/Users/mads/coding/moshbrosh/Premiere_Pro_24.0_SDK/Examples/Headers\"",
+				);
+				INFOPLIST_FILE = "MoshBrosh-Info.plist";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2025 MoshBrosh";
+				INSTALL_PATH = "@rpath";
+				LD_RUNPATH_SEARCH_PATHS = "";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moshbrosh.MoshBrosh;
+				PRODUCT_NAME = MoshBrosh;
+				REZ_SEARCH_PATHS = (
+					"\"${AE_SDK_BASE_PATH}/Examples/Headers\"",
+					"\"${AE_SDK_BASE_PATH}/Examples/Resources\"",
+					"\"/Users/mads/coding/moshbrosh/Premiere_Pro_24.0_SDK/Examples/Headers\"",
+				);
+				SKIP_INSTALL = YES;
+			};
+			name = Debug;
+		};
+		MB900202 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "c++17";
+				CLANG_CXX_LIBRARY = "libc++";
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "MoshBrosh-Prefix.pch";
+				HEADER_SEARCH_PATHS = (
+					"\"${AE_SDK_BASE_PATH}/Examples/Headers\"",
+					"\"${AE_SDK_BASE_PATH}/Examples/Headers/SP\"",
+					"\"${AE_SDK_BASE_PATH}/Examples/Util\"",
+					"\"${AE_SDK_BASE_PATH}/Examples/Resources\"",
+					"\"/Users/mads/coding/moshbrosh/Premiere_Pro_24.0_SDK/Examples/Headers\"",
+				);
+				INFOPLIST_FILE = "MoshBrosh-Info.plist";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "Copyright 2025 MoshBrosh";
+				INSTALL_PATH = "@rpath";
+				LD_RUNPATH_SEARCH_PATHS = "";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.moshbrosh.MoshBrosh;
+				PRODUCT_NAME = MoshBrosh;
+				REZ_SEARCH_PATHS = (
+					"\"${AE_SDK_BASE_PATH}/Examples/Headers\"",
+					"\"${AE_SDK_BASE_PATH}/Examples/Resources\"",
+					"\"/Users/mads/coding/moshbrosh/Premiere_Pro_24.0_SDK/Examples/Headers\"",
+				);
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		MB900001 /* Build configuration list for PBXProject "MoshBrosh" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				MB900101 /* Debug */,
+				MB900102 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		MB900003 /* Build configuration list for PBXNativeTarget "MoshBrosh" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				MB900201 /* Debug */,
+				MB900202 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = MB800002 /* Project object */;
+}

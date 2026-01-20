@@ -1,0 +1,7 @@
+/*
+ * MoshBrosh - Prefix Header
+ */
+
+#ifdef __OBJC__
+    #import <Cocoa/Cocoa.h>
+#endif
